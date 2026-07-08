@@ -36,15 +36,24 @@ ollama create colmena-vision -f colmena-vision.modelfile
 
 ## Router de la Colmena
 
-`colmena-router.py` recibe un prompt y decide automáticamente a qué homúnculo mandarlo.
+`colmena-router.py`recibe un prompt y decide a qué homúnculo mandarlo. Por defecto usa el **modelo local** (`colmena-one`) para no consumir créditos de nube sin aviso.
 
 ```bash
+# Visión: pasa una imagen
 python colmena-router.py "Dime qué errores veo en esta captura" --image screenshot.png
+
+# Local por defecto
 python colmena-router.py "Explícame qué es un transformer"
+
+# Forzar un homúnculo específico
 python colmena-router.py "Razona paso a paso sobre este problema complejo" --modelo cloud_deep
 ```
 
-El router primero pregunta a `colmena-one` cuál especialista conviene; si falla un modelo cloud, hace fallback a `colmena-one`.
+**Reglas del router:**
+- Si pasas `--image`, va a `colmena-vision`.
+- Si el prompt menciona palabras clave cloud (`deepseek`, `razona profundo`, `gpt-oss`, `nube code`, `glm`, `nube general`), rutea al cloud correspondiente.
+- En cualquier otro caso, usa `colmena-one` local.
+- Si un modelo cloud falla, hace fallback a `colmena-one`.
 
 ### Requisitos
 

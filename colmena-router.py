@@ -68,18 +68,19 @@ def ollama_generate(model, prompt):
 
 
 def classify_task(prompt):
-    """Usa colmena-one para decidir qué homúnculo conviene."""
-    classification_prompt = f"""Clasifica la siguiente tarea EXACTAMENTE con UNA de estas etiquetas:
-vision | cloud_deep | cloud_code | cloud_general | local
-
-Tarea: {prompt}
-
-Responde solo la etiqueta, sin explicación."""
-    resp = ollama_generate("colmena-one", classification_prompt)
-    label = resp.get("response", "local").strip().lower().split()[0]
-    # safety fallback
-    allowed = set(SPECIALISTS.keys())
-    return label if label in allowed else "local"
+    """Elige homúnculo de forma conservadora:
+    - Cloud solo si el usuario lo pide explícitamente (para no gastar créditos).
+    - Visión solo si se pasa imagen.
+    - Todo lo demás va al local Colmena-One.
+    """
+    p = prompt.lower()
+    if any(k in p for k in ("deepseek", "razona profundo", "nube razona", "deep reasoning")):
+        return "cloud_deep"
+    if any(k in p for k in ("gpt-oss", "nube code", "c\u00f3digo en la nube")):
+        return "cloud_code"
+    if any(k in p for k in ("glm", "nube general", "general en la nube")):
+        return "cloud_general"
+    return "local"
 
 
 def encode_image(path):

@@ -69,6 +69,38 @@ python colmena-router.py "Tu pregunta" --modelo cloud_code
 
 Opciones válidas: `local`, `vision`, `cloud_deep`, `cloud_code`, `cloud_general`.
 
+## 🤖 Colmena-Agente
+
+`colmena-agent.py` le da herramientas reales a `colmena-one`. Puede:
+
+- Leer archivos (`read_file`)
+- Listar directorios (`list_directory`)
+- Buscar texto en archivos (`search_files`)
+- Ejecutar comandos de shell (`run_shell`, con confirmación para comandos destructivos)
+- Resumir el entorno (`get_environment_summary`)
+
+### Ejemplos
+
+```bash
+# Leer un archivo
+python colmena-agent.py "lee el contenido de README.md"
+
+# Buscar en el proyecto
+python colmena-agent.py "busca dónde se define HF_TOKEN en el código"
+
+# Ejecutar un comando seguro
+python colmena-agent.py "qué versión de Python tengo instalada"
+
+# Modo sin confirmación (cuidado con rm/format)
+python colmena-agent.py "muestra el uso de disco" --yes
+```
+
+### Seguridad
+
+- Comandos potencialmente destructivos (`rm`, `del`, `format`, etc.) piden confirmación interactiva.
+- Usa `--yes` solo si sabés lo que hacés y en tu propia máquina.
+- El agente no puede (y no intenta) conectarse a máquinas remotas ni eliminar datos sin permiso.
+
 ## Características de Colmena-One
 
 - Chat general en español mexicano directo, sin relleno corporativo.

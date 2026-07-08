@@ -8,16 +8,61 @@ Modelo local para Ollama que unifica la personalidad directa de Memo con las cap
 - **Formato**: Ollama Modelfile
 - **Cuantización**: Q4_K_M (heredada del modelo base)
 
-## Uso
+## Uso rápido
 
 ```bash
 ollama create colmena-one -f colmena-one.public.modelfile
 ollama run colmena-one
 ```
 
-## Características
+## Los Homúnculos de la Colmena
 
-- Chat general en español mexicano directo y sin relleno corporativo.
+Colmena-One es el operador principal, pero no todos los modelos locales se pudieron fundir en un solo GGUF por diferencias de arquitectura o función. En vez de desperdiciarlos, cada especialista queda como un **homúnculo** al que el router manda tareas específicas.
+
+| Rol | Modelo | Qué hace |
+|---|---|---|
+| **Nexo / General** | `colmena-one` | Chat, código, debugging, arquitectura, operaciones técnicas. |
+| **Ojo / Visión** | `colmena-vision` | Análisis de imágenes, screenshots, diagramas y UI. Basado en `gemma3:4b`. |
+| **Memoria / RAG** | `nomic-embed-text:latest` | Genera embeddings para búsqueda semántica y RAG local. |
+| **Sabio profundo** | `deepseek-v3.1:671b-cloud` | Razonamiento pesado vía nube (requiere conexión y créditos). |
+| **General cloud** | `glm-5.1:cloud` | Asistente general vía nube. |
+| **Código cloud** | `gpt-oss:20b-cloud` | Variante cloud para código. |
+
+Instalar visión:
+
+```bash
+ollama create colmena-vision -f colmena-vision.modelfile
+```
+
+## Router de la Colmena
+
+`colmena-router.py` recibe un prompt y decide automáticamente a qué homúnculo mandarlo.
+
+```bash
+python colmena-router.py "Dime qué errores veo en esta captura" --image screenshot.png
+python colmena-router.py "Explícame qué es un transformer"
+python colmena-router.py "Razona paso a paso sobre este problema complejo" --modelo cloud_deep
+```
+
+El router primero pregunta a `colmena-one` cuál especialista conviene; si falla un modelo cloud, hace fallback a `colmena-one`.
+
+### Requisitos
+
+- Ollama corriendo localmente en `http://localhost:11434`.
+- Python 3 (sin dependencias externas: usa solo librería estándar).
+
+### Uso avanzado: forzar homúnculo
+
+```bash
+python colmena-router.py "Tu pregunta" --modelo vision
+python colmena-router.py "Tu pregunta" --modelo cloud_code
+```
+
+Opciones válidas: `local`, `vision`, `cloud_deep`, `cloud_code`, `cloud_general`.
+
+## Características de Colmena-One
+
+- Chat general en español mexicano directo, sin relleno corporativo.
 - Coding, debugging, arquitectura y operaciones técnicas.
 - Verdad operativa exigente: separa evidencia real de memoria/hipótesis.
 - Límites claros: no inventa estados de sistemas ni suplanta permisos.
@@ -34,4 +79,5 @@ Licensed under the Apache License, Version 2.0
 ## Agradecimientos
 
 - Qwen2.5-Coder por Alibaba Cloud.
+- Gemma3 por Google DeepMind.
 - Ollama por el ecosistema de ejecución local.

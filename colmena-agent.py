@@ -7,10 +7,64 @@ import subprocess
 import sys
 import tempfile
 import textwrap
+import threading
+import time
 import urllib.request
 import urllib.error
 
 OLLAMA_URL = "http://localhost:11434"
+
+
+class BeeSpinner:
+    """Abejita voladora: emoji + ascii mientras esperamos a Ollama."""
+
+    FRAMES = [
+        "  🐝       ",
+        " 🐝~~      ",
+        "🐝  ~~     ",
+        " 🐝  ~~    ",
+        "  🐝   ~~  ",
+        "   🐝   ~~ ",
+        "    🐝  ~~ ",
+        "     🐝 ~~ ",
+    ]
+
+    def __init__(self, message="Colmena cargando"):
+        self.message = message
+        self._stop = threading.Event()
+        self._thread = None
+
+    def _spin(self):
+        i = 0
+        while not self._stop.is_set():
+            frame = self.FRAMES[i % len(self.FRAMES)]
+            sys.stdout.write(f"\r{self.message} {frame}")
+            sys.stdout.flush()
+            time.sleep(0.12)
+            i += 1
+        sys.stdout.write("\r" + " " * (len(self.message) + 20) + "\r")
+        sys.stdout.flush()
+
+    def start(self):
+        if not sys.stdout.isatty():
+            return self
+        self._thread = threading.Thread(target=self._spin, daemon=True)
+        self._thread.start()
+        return self
+
+    def stop(self):
+        if self._thread is None:
+            return
+        self._stop.set()
+        self._thread.join(timeout=0.5)
+        sys.stdout.flush()
+
+    def __enter__(self):
+        self.start()
+        return self
+
+    def __exit__(self, *args):
+        self.stop()
 MODEL = "colmena-one"
 EMBEDDING_MODEL = "nomic-embed-text:latest"
 VISION_MODEL = "colmena-vision"
@@ -349,8 +403,9 @@ def ollama_chat(messages, tools=None):
         method="POST",
     )
     try:
-        with urllib.request.urlopen(req, timeout=900) as resp:
-            return json.loads(resp.read().decode("utf-8"))
+        with BeeSpinner("🐝 Colmena agente pensando"):
+            with urllib.request.urlopen(req, timeout=900) as resp:
+                return json.loads(resp.read().decode("utf-8"))
     except urllib.error.HTTPError as e:
         return {"error": f"HTTP {e.code}: {e.read().decode('utf-8', errors='ignore')}"}
     except Exception as e:
@@ -367,8 +422,9 @@ def ollama_generate(model, prompt):
         method="POST",
     )
     try:
-        with urllib.request.urlopen(req, timeout=900) as resp:
-            return json.loads(resp.read().decode("utf-8"))
+        with BeeSpinner("🐝 Colmena agente razonando"):
+            with urllib.request.urlopen(req, timeout=900) as resp:
+                return json.loads(resp.read().decode("utf-8"))
     except urllib.error.HTTPError as e:
         return {"error": f"HTTP {e.code}: {e.read().decode('utf-8', errors='ignore')}"}
     except Exception as e:
@@ -385,8 +441,9 @@ def ollama_embeddings(text):
         method="POST",
     )
     try:
-        with urllib.request.urlopen(req, timeout=120) as resp:
-            return json.loads(resp.read().decode("utf-8"))
+        with BeeSpinner("🐝 Generando embedding"):
+            with urllib.request.urlopen(req, timeout=120) as resp:
+                return json.loads(resp.read().decode("utf-8"))
     except Exception as e:
         return {"error": str(e)}
 
@@ -603,9 +660,10 @@ def ollama_chat_raw(model, messages):
         method="POST",
     )
     try:
-        with urllib.request.urlopen(req, timeout=120) as resp:
-            d = json.loads(resp.read().decode("utf-8"))
-            return d.get("message", {}).get("content", "(sin respuesta)")
+        with BeeSpinner("🐝 Colmena visión analizando"):
+            with urllib.request.urlopen(req, timeout=120) as resp:
+                d = json.loads(resp.read().decode("utf-8"))
+                return d.get("message", {}).get("content", "(sin respuesta)")
     except Exception as e:
         return f"Error en chat con visión: {e}"
 

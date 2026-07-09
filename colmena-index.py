@@ -3,11 +3,82 @@ import json
 import math
 import os
 import sys
+import threading
+import time
 import urllib.request
 from pathlib import Path
 
 OLLAMA_URL = "http://localhost:11434"
 EMBEDDING_MODEL = "nomic-embed-text:latest"
+
+
+class BeeSpinner:
+    """Spinner de abejas volando: emoji + ascii."""
+
+    FRAMES = [
+        "  🐝       ",
+        " 🐝~~      ",
+        "🐝  ~~     ",
+        " 🐝  ~~    ",
+        "  🐝   ~~  ",
+        "   🐝   ~~ ",
+        "    🐝  ~~ ",
+        "     🐝 ~~ ",
+    ]
+
+    def __init__(self, message="Colmena cargando"):
+        self.message = message
+        self._stop = threading.Event()
+        self._thread = None
+
+    def _spin(self):
+        i = 0
+        while not self._stop.is_set():
+            frame = self.FRAMES[i % len(self.FRAMES)]
+            line = f"\r{self.message} {frame}"
+            sys.stdout.write(line)
+            sys.stdout.flush()
+            time.sleep(0.12)
+            i += 1
+        # limpiar línea
+        sys.stdout.write("\r" + " " * (len(self.message) + 20) + "\r")
+        sys.stdout.flush()
+
+    def start(self):
+        if not sys.stdout.isatty():
+            return self
+        self._thread = threading.Thread(target=self._spin, daemon=True)
+        self._thread.start()
+        return self
+
+    def stop(self):
+        if self._thread is None:
+            return
+        self._stop.set()
+        self._thread.join(timeout=0.5)
+        sys.stdout.flush()
+
+    def __enter__(self):
+        self.start()
+        return self
+
+    def __exit__(self, *args):
+        self.stop()
+
+
+def get_embedding(text):
+    payload = {"model": EMBEDDING_MODEL, "prompt": text}
+    data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+    req = urllib.request.Request(
+        f"{OLLAMA_URL}/api/embeddings",
+        data=data,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    with BeeSpinner("zumbando embedding"):
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            d = json.loads(resp.read().decode("utf-8"))
+    return d.get("embedding", [])
 
 # Extensiones útiles para repositorios de código, documentación y config.
 CODE_EXTENSIONS = {

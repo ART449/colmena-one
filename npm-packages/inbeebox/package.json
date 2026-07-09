@@ -1,0 +1,30 @@
+{
+  "name": "inbeebox",
+  "version": "0.2.0-preview",
+  "description": "INBEEBOX - Caja de herramientas local de Colmena: agente con herramientas reales e indexer de repositorios.",
+  "main": "bin/inbeebox.js",
+  "bin": {
+    "inbeebox": "bin/inbeebox.js"
+  },
+  "files": [
+    "bin",
+    "scripts",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node -e \"console.log('INBEEBOX ok')\""
+  },
+  "keywords": [
+    "ollama",
+    "local-llm",
+    "agent",
+    "rag",
+    "embeddings",
+    "colmena"
+  ],
+  "author": "ART449",
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

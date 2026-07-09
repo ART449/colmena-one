@@ -1,0 +1,33 @@
+{
+  "name": "octohype",
+  "version": "0.2.0-preview",
+  "description": "OctoHype - Orquestador de homúnculos Colmena (router local + nube + visión).",
+  "main": "bin/octohype.js",
+  "bin": {
+    "octohype": "bin/octohype.js"
+  },
+  "files": [
+    "bin",
+    "scripts",
+    "README.md"
+  ],
+  "dependencies": {
+    "inbeebox": "^0.2.0-preview"
+  },
+  "scripts": {
+    "test": "node -e \"console.log('OctoHype ok')\""
+  },
+  "keywords": [
+    "ollama",
+    "local-llm",
+    "router",
+    "orchestrator",
+    "colmena",
+    "octohype"
+  ],
+  "author": "ART449",
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

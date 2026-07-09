@@ -2,64 +2,38 @@ import argparse
 import base64
 import json
 import sys
-import threading
-import time
 import urllib.request
 import urllib.error
 
 OLLAMA_URL = "http://localhost:11434"
 
 
-class BeeSpinner:
-    """Abejita voladora mientras esperamos a Ollama."""
+try:
+    from colmena_animations import HexLoader as BeeSpinner, MessageReceiver, SplashScreen
+except Exception:
+    class BeeSpinner:
+        def __init__(self, message="Colmena cargando"):
+            self.message = message
 
-    FRAMES = [
-        "  🐝       ",
-        " 🐝~~      ",
-        "🐝  ~~     ",
-        " 🐝  ~~    ",
-        "  🐝   ~~  ",
-        "   🐝   ~~ ",
-        "    🐝  ~~ ",
-        "     🐝 ~~ ",
-    ]
-
-    def __init__(self, message="Colmena cargando"):
-        self.message = message
-        self._stop = threading.Event()
-        self._thread = None
-
-    def _spin(self):
-        i = 0
-        while not self._stop.is_set():
-            frame = self.FRAMES[i % len(self.FRAMES)]
-            sys.stdout.write(f"\r{self.message} {frame}")
-            sys.stdout.flush()
-            time.sleep(0.12)
-            i += 1
-        sys.stdout.write("\r" + " " * (len(self.message) + 20) + "\r")
-        sys.stdout.flush()
-
-    def start(self):
-        if not sys.stdout.isatty():
+        def start(self):
             return self
-        self._thread = threading.Thread(target=self._spin, daemon=True)
-        self._thread.start()
-        return self
 
-    def stop(self):
-        if self._thread is None:
-            return
-        self._stop.set()
-        self._thread.join(timeout=0.5)
-        sys.stdout.flush()
+        def stop(self):
+            pass
 
-    def __enter__(self):
-        self.start()
-        return self
+        def __enter__(self):
+            return self.start()
 
-    def __exit__(self, *args):
-        self.stop()
+        def __exit__(self, *args):
+            self.stop()
+
+    MessageReceiver = None
+    SplashScreen = None
+
+try:
+    import colmena_tts
+except Exception:
+    colmena_tts = None
 
 SPECIALISTS = {
     "vision": {
@@ -148,14 +122,37 @@ def main():
     parser = argparse.ArgumentParser(
         description="Colmena Router: envía el prompt al homúnculo adecuado en Ollama."
     )
-    parser.add_argument("prompt", help="Texto del usuario.")
+    parser.add_argument("prompt", nargs="?", help="Texto del usuario.")
     parser.add_argument("--imagen", "--image", help="Ruta a imagen (activa colmena-vision)")
     parser.add_argument(
         "--modelo",
         choices=list(SPECIALISTS.keys()),
         help="Forzar homúnculo específico en vez de auto-detectar.",
     )
+    parser.add_argument(
+        "--voice",
+        default=None,
+        help="Hablar la respuesta final con una voz/preset (memo, sabina, david, zira, etc.).",
+    )
+    parser.add_argument(
+        "--voice-list",
+        action="store_true",
+        help="Listar voces/presets disponibles y salir.",
+    )
     args = parser.parse_args()
+
+    if args.voice_list:
+        if colmena_tts:
+            colmena_tts.print_voices()
+        else:
+            print("⚠️  colmena_tts no disponible. Instalá pyttsx3.")
+        sys.exit(0)
+
+    if not args.prompt and not args.imagen:
+        parser.error("Se requiere un PROMPT o una imagen (--imagen).")
+
+    if SplashScreen:
+        SplashScreen.show()
 
     if args.imagen:
         specialist = "vision"
@@ -176,6 +173,7 @@ def main():
     print(f"   {info['description']}\n")
 
     resp = ollama_chat(info["model"], messages)
+    content = None
     if "error" in resp:
         print(f"❌ Error con {info['model']}: {resp['error']}")
         if specialist != "local":
@@ -185,11 +183,21 @@ def main():
                 print(f"❌ Fallback también falló: {resp['error']}")
                 sys.exit(1)
             else:
-                print(resp.get("message", {}).get("content", "(sin respuesta)"))
+                content = resp.get("message", {}).get("content", "(sin respuesta)")
         else:
             sys.exit(1)
     else:
-        print(resp.get("message", {}).get("content", "(sin respuesta)"))
+        content = resp.get("message", {}).get("content", "(sin respuesta)")
+
+    if content:
+        if MessageReceiver and sys.stdout.isatty():
+            MessageReceiver("📨 Mensaje entrante").play_and_wait()
+        print(content)
+        if args.voice and colmena_tts:
+            try:
+                colmena_tts.speak(content[:400], voice=args.voice)
+            except Exception as e:
+                print(f"⚠️  Error TTS: {e}", file=sys.stderr)
 
 
 if __name__ == "__main__":

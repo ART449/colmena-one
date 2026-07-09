@@ -15,56 +15,35 @@ import urllib.error
 OLLAMA_URL = "http://localhost:11434"
 
 
-class BeeSpinner:
-    """Abejita voladora: emoji + ascii mientras esperamos a Ollama."""
+# Importar utilidades rich de Colmena con fallback mínimo
+try:
+    from colmena_animations import HexLoader as BeeSpinner, MessageReceiver, SplashScreen
+except Exception:
+    class BeeSpinner:
+        def __init__(self, message="Colmena cargando"):
+            self.message = message
 
-    FRAMES = [
-        "  🐝       ",
-        " 🐝~~      ",
-        "🐝  ~~     ",
-        " 🐝  ~~    ",
-        "  🐝   ~~  ",
-        "   🐝   ~~ ",
-        "    🐝  ~~ ",
-        "     🐝 ~~ ",
-    ]
-
-    def __init__(self, message="Colmena cargando"):
-        self.message = message
-        self._stop = threading.Event()
-        self._thread = None
-
-    def _spin(self):
-        i = 0
-        while not self._stop.is_set():
-            frame = self.FRAMES[i % len(self.FRAMES)]
-            sys.stdout.write(f"\r{self.message} {frame}")
-            sys.stdout.flush()
-            time.sleep(0.12)
-            i += 1
-        sys.stdout.write("\r" + " " * (len(self.message) + 20) + "\r")
-        sys.stdout.flush()
-
-    def start(self):
-        if not sys.stdout.isatty():
+        def start(self):
             return self
-        self._thread = threading.Thread(target=self._spin, daemon=True)
-        self._thread.start()
-        return self
 
-    def stop(self):
-        if self._thread is None:
-            return
-        self._stop.set()
-        self._thread.join(timeout=0.5)
-        sys.stdout.flush()
+        def stop(self):
+            pass
 
-    def __enter__(self):
-        self.start()
-        return self
+        def __enter__(self):
+            return self.start()
 
-    def __exit__(self, *args):
-        self.stop()
+        def __exit__(self, *args):
+            self.stop()
+
+    MessageReceiver = None
+    SplashScreen = None
+
+try:
+    import colmena_tts
+except Exception:
+    colmena_tts = None
+
+
 MODEL = "colmena-one"
 EMBEDDING_MODEL = "nomic-embed-text:latest"
 VISION_MODEL = "colmena-vision"
@@ -756,7 +735,7 @@ def main():
     parser = argparse.ArgumentParser(
         description="Colmena-Agente: agente local con herramientas reales."
     )
-    parser.add_argument("prompt", help="Tarea o pregunta para el agente.")
+    parser.add_argument("prompt", nargs="?", help="Tarea o pregunta para el agente.")
     parser.add_argument(
         "--yes",
         action="store_true",
@@ -768,7 +747,31 @@ def main():
         default=MAX_ITERATIONS,
         help=f"Máximo de iteraciones de herramientas (default {MAX_ITERATIONS}).",
     )
+    parser.add_argument(
+        "--voice",
+        default=None,
+        help="Hablar la respuesta final con una voz/preset (ej: memo, sabina, david, zira, 0, 1). Requiere pyttsx3.",
+    )
+    parser.add_argument(
+        "--voice-list",
+        action="store_true",
+        help="Listar voces/presets disponibles y salir.",
+    )
     args = parser.parse_args()
+
+    if args.voice_list:
+        if colmena_tts:
+            colmena_tts.print_voices()
+        else:
+            print("⚠️  colmena_tts no disponible. Instalá pyttsx3.")
+        sys.exit(0)
+
+    if not args.prompt:
+        parser.error("Se requiere un PROMPT. Ejemplo: colmena-agent.py 'lee README.md'")
+
+    if SplashScreen:
+        SplashScreen.show()
+
 
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
@@ -794,7 +797,15 @@ def main():
                 content = re.sub(r"```(?:json)?\s*.*?\s*```", "", content, flags=re.DOTALL).strip()
 
         if not tool_calls:
+            if MessageReceiver and sys.stdout.isatty():
+                MessageReceiver("📨 Mensaje entrante").play_and_wait()
             print(content or "(sin respuesta)")
+            if args.voice and content and colmena_tts:
+                speech_text = content[:400]
+                try:
+                    colmena_tts.speak(speech_text, voice=args.voice)
+                except Exception as e:
+                    print(f"⚠️  Error TTS: {e}", file=sys.stderr)
             return
 
         print(f"🛠️  Iteración {i+1}: invocando {len(tool_calls)} herramienta(s)...")

@@ -1,7 +1,7 @@
 {
   "name": "octohype",
-  "version": "0.2.0-preview",
-  "description": "OctoHype - Orquestador de homúnculos Colmena (router local + nube + visión).",
+  "version": "1.0.0",
+  "description": "OctoHype v1.0.0 - Orquestador de homúnculos Colmena con animaciones de panal/abejas y TTS nativo (router local + nube + visión).",
   "main": "bin/octohype.js",
   "bin": {
     "octohype": "bin/octohype.js"
@@ -12,7 +12,7 @@
     "README.md"
   ],
   "dependencies": {
-    "inbeebox": "^0.2.0-preview"
+    "inbeebox": "^1.0.0"
   },
   "scripts": {
     "test": "node -e \"console.log('OctoHype ok')\""

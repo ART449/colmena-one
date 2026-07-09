@@ -3,8 +3,6 @@ import json
 import math
 import os
 import sys
-import threading
-import time
 import urllib.request
 from pathlib import Path
 
@@ -12,58 +10,31 @@ OLLAMA_URL = "http://localhost:11434"
 EMBEDDING_MODEL = "nomic-embed-text:latest"
 
 
-class BeeSpinner:
-    """Spinner de abejas volando: emoji + ascii."""
+try:
+    from colmena_animations import HexLoader as BeeSpinner, SplashScreen
+except Exception:
+    class BeeSpinner:
+        def __init__(self, message="Colmena cargando"):
+            self.message = message
 
-    FRAMES = [
-        "  🐝       ",
-        " 🐝~~      ",
-        "🐝  ~~     ",
-        " 🐝  ~~    ",
-        "  🐝   ~~  ",
-        "   🐝   ~~ ",
-        "    🐝  ~~ ",
-        "     🐝 ~~ ",
-    ]
-
-    def __init__(self, message="Colmena cargando"):
-        self.message = message
-        self._stop = threading.Event()
-        self._thread = None
-
-    def _spin(self):
-        i = 0
-        while not self._stop.is_set():
-            frame = self.FRAMES[i % len(self.FRAMES)]
-            line = f"\r{self.message} {frame}"
-            sys.stdout.write(line)
-            sys.stdout.flush()
-            time.sleep(0.12)
-            i += 1
-        # limpiar línea
-        sys.stdout.write("\r" + " " * (len(self.message) + 20) + "\r")
-        sys.stdout.flush()
-
-    def start(self):
-        if not sys.stdout.isatty():
+        def start(self):
             return self
-        self._thread = threading.Thread(target=self._spin, daemon=True)
-        self._thread.start()
-        return self
 
-    def stop(self):
-        if self._thread is None:
-            return
-        self._stop.set()
-        self._thread.join(timeout=0.5)
-        sys.stdout.flush()
+        def stop(self):
+            pass
 
-    def __enter__(self):
-        self.start()
-        return self
+        def __enter__(self):
+            return self.start()
 
-    def __exit__(self, *args):
-        self.stop()
+        def __exit__(self, *args):
+            self.stop()
+
+    SplashScreen = None
+
+try:
+    import colmena_tts
+except Exception:
+    colmena_tts = None
 
 
 def get_embedding(text):
@@ -213,16 +184,26 @@ def search_codebase(query, db_path, top_k=5):
         scored.append((score, r))
     scored.sort(key=lambda x: x[0], reverse=True)
     print(f"Top {top_k} resultados para: {query}\n")
-    for score, r in scored[:top_k]:
+    summary = ""
+    for idx, (score, r) in enumerate(scored[:top_k], 1):
         source = r["source"]
         preview = r["text"].replace("\n", " ")[:250]
         print(f"score {score:.4f} | {source}")
         print(f"    {preview}\n")
+        if idx == 1:
+            summary = f"En {source}, {preview}"
+    return summary
 
 
 def main():
     parser = argparse.ArgumentParser(description="Colmena Index: indexa repositorios con embeddings de nomic-embed-text.")
-    sub = parser.add_subparsers(dest="command", required=True)
+    sub = parser.add_subparsers(dest="command", required=False)
+
+    parser.add_argument(
+        "--voice-list",
+        action="store_true",
+        help="Listar voces/presets TTS disponibles y salir.",
+    )
 
     p_index = sub.add_parser("index", help="Indexar un directorio")
     p_index.add_argument("path", help="Ruta del repositorio/directorio a indexar")
@@ -240,13 +221,37 @@ def main():
         help="Ruta de la base de vectores",
     )
     p_search.add_argument("--top-k", type=int, default=5, help="Cantidad de resultados")
+    p_search.add_argument(
+        "--voice",
+        default=None,
+        help="Hablar un resumen del top-1 resultado con la voz indicada.",
+    )
 
     args = parser.parse_args()
+
+    if args.voice_list:
+        if colmena_tts:
+            colmena_tts.print_voices()
+        else:
+            print("⚠️  colmena_tts no disponible. Instalá pyttsx3.")
+        sys.exit(0)
+
+    if SplashScreen:
+        SplashScreen.show()
+
+    if not args.command:
+        parser.error("Se requiere un comando: 'index' o 'search'.")
 
     if args.command == "index":
         index_repository(args.path, args.db)
     elif args.command == "search":
-        search_codebase(args.query, args.db, args.top_k)
+        result_summary = search_codebase(args.query, args.db, args.top_k)
+        if args.voice and result_summary and colmena_tts:
+            summary = result_summary[:300]
+            try:
+                colmena_tts.speak(f"Resultado más cercano: {summary}", voice=args.voice)
+            except Exception as e:
+                print(f"⚠️  Error TTS: {e}", file=sys.stderr)
 
 
 if __name__ == "__main__":

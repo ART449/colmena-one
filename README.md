@@ -1,3 +1,14 @@
+---
+tags:
+- ollama
+- local-llm
+- agent
+- rag
+- colmena
+- qwen2.5-coder
+license: apache-2.0
+---
+
 # Colmena-One v1.0.0
 
 Modelo local unificado para Ollama: personalidad directa mexa + capacidades de código, **pantallas de carga con panal de abejas**, **TTS nativo con voces programadas**, herramientas reales, visión, embeddings y orquestación entre modelos locales y nube.

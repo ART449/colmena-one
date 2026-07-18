@@ -1,0 +1,2 @@
+# Explicit empty .npmignore so npm does not fall back to .gitignore for exclusion.
+# The package.json "files" list controls what gets published.

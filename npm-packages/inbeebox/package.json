@@ -1,6 +1,6 @@
 {
   "name": "inbeebox",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "INBEEBOX v1.0.0 - Caja de herramientas local de Colmena: agente con herramientas reales, animaciones de panal/abejas, TTS nativo e indexer de repositorios.",
   "main": "bin/inbeebox.js",
   "bin": {

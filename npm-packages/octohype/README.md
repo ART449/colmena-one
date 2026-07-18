@@ -27,7 +27,25 @@ octohype "Razona profundo" --modelo cloud_deep
 
 - Python 3.x
 - Ollama corriendo en `http://localhost:11434`
-- Modelos: `colmena-one`, `colmena-vision`
+- Modelos locales en Ollama: `colmena-one`, `colmena-vision`
+
+### Creación de Modelos en Ollama
+
+Para configurar los modelos requeridos en cualquier máquina:
+
+1. **colmena-one** (Chat y Código - requiere `qwen2.5-coder:7b`):
+   ```bash
+   ollama pull qwen2.5-coder:7b
+   ollama create colmena-one -f colmena-one.modelfile
+   ```
+
+2. **colmena-vision** (Visión e Imágenes - requiere `gemma3:4b`):
+   ```bash
+   ollama pull gemma3:4b
+   ollama create colmena-vision -f colmena-vision.modelfile
+   ```
+
+*Nota: Los archivos `.modelfile` se encuentran en la raíz del repositorio de ByFlow (o en la carpeta raíz del paquete instalado globalmente de npm).*
 
 ## Relación con INBEEBOX
 
